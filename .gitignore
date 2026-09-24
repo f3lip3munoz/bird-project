@@ -1,0 +1,26 @@
+# Media and observation data live in OneDrive, never in the repo
+*.jpg
+*.JPG
+*.jpeg
+*.heic
+*.HEIC
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.csv
+*.db
+*.sqlite
+Aves/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.claude/settings.local.json

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Libreta de campo para registrar observaciones de aves de Chile. Funciona sin conexión.">
+<meta name="theme-color" content="#1f6f54" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1613" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aves">
+<title>Libreta de Aves</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/app.css">
+<script>
+  // Apply the saved theme before first paint to avoid a flash
+  try { const t = localStorage.getItem("libreta_theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar (desktop) / top bar (mobile) -->
+  <aside class="sidebar">
+    <a class="brand" href="#/anotar">
+      <img src="icons/icon.svg" alt="" width="40" height="40">
+      <span><strong>Libreta de Aves</strong><small>Aves de Chile</small></span>
+    </a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="#/anotar" data-view="anotar"><svg><use href="#i-plus"/></svg><span>Anotar</span></a>
+      <a href="#/registro" data-view="registro"><svg><use href="#i-list"/></svg><span>Registro</span></a>
+      <a href="#/especies" data-view="especies"><svg><use href="#i-bird"/></svg><span>Especies</span></a>
+      <a href="#/datos" data-view="datos"><svg><use href="#i-cloud"/></svg><span>Datos</span><i class="dot" id="navDot" hidden></i></a>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="observer-chip" id="observerChip" type="button"><svg><use href="#i-user"/></svg><span id="observerName">Sin observador</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============ ANOTAR ============ -->
+    <section class="view" id="view-anotar" aria-labelledby="h-anotar">
+      <header class="view-head">
+        <div>
+          <p class="eyebrow" id="todayLabel"></p>
+          <h1 id="h-anotar">Nueva observación</h1>
+        </div>
+        <span class="net-pill" id="netPill"></span>
+      </header>
+
+      <div class="split">
+        <form id="obsForm" class="stack" autocomplete="off" novalidate>
+          <div class="editing-bar" id="editingBar" hidden>
+            <span>Editando observación</span>
+            <button type="button" class="link" id="cancelEdit">Cancelar</button>
+          </div>
+
+          <fieldset class="card">
+            <legend class="card-title"><span class="step">1</span>¿Qué viste?</legend>
+
+            <label class="field-label" for="f_species">Especie</label>
+            <div class="combo" id="combo">
+              <svg class="combo-icon"><use href="#i-search"/></svg>
+              <input type="text" id="f_species" role="combobox" aria-expanded="false" aria-controls="speciesList"
+                     aria-autocomplete="list" placeholder="Busca por nombre común o científico" spellcheck="false">
+              <button type="button" class="combo-clear" id="speciesClear" aria-label="Borrar especie" hidden>&times;</button>
+              <ul class="combo-list" id="speciesList" role="listbox"></ul>
+            </div>
+            <div class="recent" id="recentSpecies"></div>
+
+            <div class="grid-2">
+              <div>
+                <span class="field-label">Identificación</span>
+                <div class="segmented" id="statusSeg" role="radiogroup" aria-label="Estado de identificación">
+                  <button type="button" role="radio" data-s="confirmed">Confirmada</button>
+                  <button type="button" role="radio" data-s="tentative">Tentativa</button>
+                  <button type="button" role="radio" data-s="unidentified">Sin ID</button>
+                </div>
+              </div>
+              <div>
+                <label class="field-label" for="f_count">Individuos</label>
+                <div class="stepper">
+                  <button type="button" data-step="-1" aria-label="Menos">−</button>
+                  <input type="number" id="f_count" min="0" step="1" inputmode="numeric" placeholder="1">
+                  <button type="button" data-step="1" aria-label="Más">+</button>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend class="card-title"><span class="step">2</span>¿Dónde y cuándo?</legend>
+            <div class="grid-2">
+              <div>
+                <label class="field-label" for="f_date">Fecha y hora</label>
+                <input type="datetime-local" id="f_date" required>
+              </div>
+              <div>
+                <label class="field-label" for="f_place">Lugar</label>
+                <input type="text" id="f_place" list="placesList" placeholder="Ej. Parque Bicentenario, Vitacura">
+                <datalist id="placesList"></datalist>
+              </div>
+            </div>
+            <button type="button" class="gps" id="gpsBtn">
+              <svg><use href="#i-pin"/></svg>
+              <span class="gps-text"><strong id="gpsTitle">Capturar ubicación GPS</strong><small id="gpsSub">Opcional · funciona sin señal de datos</small></span>
+              <span class="gps-clear" id="gpsClear" role="button" aria-label="Quitar ubicación" hidden>&times;</span>
+            </button>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend class="card-title"><span class="step">3</span>Contexto</legend>
+            <span class="field-label">Comportamiento</span>
+            <div class="chips" id="behaviorChips" data-multi="1"></div>
+            <span class="field-label">Hábitat</span>
+            <div class="chips" id="habitatChips"></div>
+            <label class="field-label" for="f_weather">Clima</label>
+            <input type="text" id="f_weather" placeholder="Ej. despejado, 18 °C, viento suave">
+            <div class="chips chips-sm" id="weatherChips"></div>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend class="card-title"><span class="step">4</span>Notas y archivos</legend>
+            <label class="field-label" for="f_notes">Comentarios</label>
+            <textarea id="f_notes" rows="3" placeholder="Plumaje, canto, detalles para la identificación…"></textarea>
+            <div class="grid-2">
+              <div>
+                <label class="field-label" for="f_photos">Fotos</label>
+                <input type="text" id="f_photos" placeholder="IMG_6164.JPG, IMG_6165.JPG">
+              </div>
+              <div>
+                <label class="field-label" for="f_audio">Audios</label>
+                <input type="text" id="f_audio" placeholder="REC_0012.m4a">
+              </div>
+            </div>
+            <p class="hint">Solo los nombres de archivo; los archivos quedan en tu carpeta de OneDrive.</p>
+          </fieldset>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" id="resetBtn">Limpiar</button>
+            <button type="submit" class="btn btn-primary" id="saveBtn"><svg><use href="#i-check"/></svg><span>Guardar observación</span></button>
+          </div>
+        </form>
+
+        <aside class="side-panel">
+          <div class="card">
+            <div class="card-row">
+              <h2 class="card-title plain">Hoy</h2>
+              <a href="#/registro" class="link">Ver registro</a>
+            </div>
+            <div id="todayList" class="mini-list"></div>
+          </div>
+          <div class="card tip">
+            <svg><use href="#i-leaf"/></svg>
+            <p>Después de guardar, el <b>lugar, GPS, hábitat y clima</b> se mantienen para que anotes la siguiente especie más rápido.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ REGISTRO ============ -->
+    <section class="view" id="view-registro" aria-labelledby="h-registro" hidden>
+      <header class="view-head">
+        <div>
+          <p class="eyebrow" id="regCount"></p>
+          <h1 id="h-registro">Registro</h1>
+        </div>
+      </header>
+      <div class="toolbar">
+        <div class="search">
+          <svg><use href="#i-search"/></svg>
+          <input type="search" id="regSearch" placeholder="Buscar especie, lugar, notas…">
+        </div>
+        <div class="chips chips-filter" id="regFilter">
+          <button type="button" data-f="all" class="on">Todas</button>
+          <button type="button" data-f="confirmed">Confirmadas</button>
+          <button type="button" data-f="tentative">Tentativas</button>
+          <button type="button" data-f="unidentified">Sin ID</button>
+        </div>
+      </div>
+      <div id="regList"></div>
+    </section>
+
+    <!-- ============ ESPECIES ============ -->
+    <section class="view" id="view-especies" aria-labelledby="h-especies" hidden>
+      <header class="view-head">
+        <div>
+          <p class="eyebrow">Tu lista de vida</p>
+          <h1 id="h-especies">Especies</h1>
+        </div>
+      </header>
+      <div class="stats" id="stats"></div>
+      <div class="toolbar">
+        <div class="search">
+          <svg><use href="#i-search"/></svg>
+          <input type="search" id="spSearch" placeholder="Filtrar especies…">
+        </div>
+      </div>
+      <div class="card flush" id="speciesTable"></div>
+    </section>
+
+    <!-- ============ DATOS ============ -->
+    <section class="view" id="view-datos" aria-labelledby="h-datos" hidden>
+      <header class="view-head">
+        <div>
+          <p class="eyebrow">Respaldo y sincronización</p>
+          <h1 id="h-datos">Datos</h1>
+        </div>
+      </header>
+
+      <div class="data-grid">
+        <div class="card status-card" id="syncCard"></div>
+
+        <div class="card">
+          <h2 class="card-title plain"><svg><use href="#i-share"/></svg>Exportar CSV</h2>
+          <p class="muted">Genera un archivo con <b>todas</b> las observaciones de este dispositivo. En el celular puedes compartirlo directo a la app de OneDrive.</p>
+          <button type="button" class="btn btn-primary" id="exportBtn"><svg><use href="#i-download"/></svg><span>Exportar observaciones</span></button>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title plain"><svg><use href="#i-upload"/></svg>Importar CSV</h2>
+          <p class="muted">Combina un CSV con lo que hay aquí. Las observaciones se reconocen por su ID: no se duplican, y gana la versión editada más recientemente.</p>
+          <button type="button" class="btn btn-secondary" id="importBtn"><svg><use href="#i-upload"/></svg><span>Elegir archivo CSV</span></button>
+          <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
+        </div>
+
+        <div class="card" id="linkCard">
+          <h2 class="card-title plain"><svg><use href="#i-link"/></svg>Archivo enlazado <span class="tag">Computador</span></h2>
+          <p class="muted">En Chrome o Edge puedes enlazar tu <code>observations.csv</code> de OneDrive: cada cambio se guarda en él automáticamente.</p>
+          <div id="linkState" class="link-state"></div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-secondary" id="linkBtn"><svg><use href="#i-link"/></svg><span>Enlazar archivo</span></button>
+            <button type="button" class="btn btn-ghost" id="unlinkBtn" hidden>Desenlazar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title plain"><svg><use href="#i-user"/></svg>Observadores</h2>
+          <div id="observerList" class="observer-list"></div>
+          <form class="inline-form" id="observerForm">
+            <input type="text" id="newObserver" placeholder="Nombre del observador" autocomplete="name">
+            <button type="submit" class="btn btn-secondary">Agregar</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title plain"><svg><use href="#i-sun"/></svg>Apariencia</h2>
+          <div class="segmented" id="themeSeg">
+            <button type="button" data-t="auto">Automático</button>
+            <button type="button" data-t="light">Claro</button>
+            <button type="button" data-t="dark">Oscuro</button>
+          </div>
+          <div id="installBox" class="install-box"></div>
+        </div>
+
+        <details class="card howto">
+          <summary><h2 class="card-title plain">¿Cómo funciona el respaldo?</h2></summary>
+          <ol>
+            <li>Las observaciones se guardan <b>en el navegador de cada dispositivo</b>. No se envían a ningún servidor.</li>
+            <li>En el <b>celular</b>: después de cada salida a terreno, toca <b>Exportar</b> y guarda el archivo en <code>Bird-Project/entrada/</code> de OneDrive.</li>
+            <li>En el <b>computador</b>: enlaza <code>Bird-Project/observations.csv</code> (el archivo maestro) e <b>importa</b> los CSV de la carpeta <code>entrada</code>. Se combinan sin duplicar.</li>
+            <li>Si borras los datos del navegador, pierdes lo que no hayas exportado. Por eso la app te avisa cuando hay cambios sin exportar.</li>
+          </ol>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom nav (mobile) -->
+  <nav class="tabbar" aria-label="Secciones">
+    <a href="#/anotar" data-view="anotar"><svg><use href="#i-plus"/></svg><span>Anotar</span></a>
+    <a href="#/registro" data-view="registro"><svg><use href="#i-list"/></svg><span>Registro</span></a>
+    <a href="#/especies" data-view="especies"><svg><use href="#i-bird"/></svg><span>Especies</span></a>
+    <a href="#/datos" data-view="datos"><svg><use href="#i-cloud"/></svg><span>Datos</span><i class="dot" id="tabDot" hidden></i></a>
+  </nav>
+</div>
+
+<!-- Observer dialog -->
+<dialog id="observerDialog" class="dialog">
+  <form id="observerDialogForm">
+    <h2>¿Quién observa?</h2>
+    <p class="muted">Tu nombre queda registrado en cada observación.</p>
+    <div id="observerPick" class="observer-pick"></div>
+    <input type="text" id="dlgObserver" placeholder="Nuevo observador" autocomplete="name">
+    <div class="btn-row end">
+      <button type="button" class="btn btn-ghost" id="dlgCancel">Cerrar</button>
+      <button type="submit" class="btn btn-primary" id="dlgObserverOk">Usar este nombre</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastAction" hidden></button></div>
+
+<!-- Icon sprite (Lucide-style strokes) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+    <symbol id="i-bird" viewBox="0 0 24 24"><path d="M16 7h.01M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5M10 18v3M14 17.75V21M7 18a6 6 0 0 0 3.84-10.61"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+  </defs>
+</svg>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

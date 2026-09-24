@@ -1,0 +1,23 @@
+{
+  "name": "Libreta de Aves de Chile",
+  "short_name": "Aves",
+  "description": "Libreta de campo para registrar observaciones de aves de Chile, con o sin conexión.",
+  "lang": "es-CL",
+  "start_url": "./#/anotar",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f1e9",
+  "theme_color": "#1f6f54",
+  "categories": ["education", "lifestyle", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "Nueva observación", "url": "./#/anotar" },
+    { "name": "Registro", "url": "./#/registro" }
+  ]
+}
