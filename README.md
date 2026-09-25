@@ -34,12 +34,27 @@ Luego abre http://localhost:8765. En `localhost` el service worker está desacti
 
 Al publicar cambios en archivos de `web/`, sube `VERSION` en [web/sw.js](web/sw.js) para que los dispositivos instalados se actualicen.
 
+## Base de datos (Python)
+
+La carpeta `pipeline/` contiene el paquete `aves`, que junta en una base SQLite (`Bird-Project/db/aves.sqlite`, en OneDrive) las observaciones de la web y las fotos ordenadas en `Bird-Project/Aves/`. Sus tablas y reglas están en [docs/database.md](docs/database.md).
+
+```bash
+python -m pip install -e pipeline
+python -m aves init --bird-project "C:/Users/felip/OneDrive - Universidad Católica de Chile/Bird-Project" --observador "Felipe Muñoz"
+python -m aves actualizar
+```
+
+`actualizar` importa `Bird-Project/observations.csv` (si existe) y las fotos, y luego muestra un resumen. Se puede repetir las veces que quieras: solo entra lo nuevo, y si mueves una foto de `Revisión/` a la carpeta de una especie, se reasigna sola.
+
+Pruebas: `python -m unittest discover -s pipeline/tests`
+
 ## Estructura
 
 ```
 web/                 App web (se publica en GitHub Pages)
   data/chile_birds.json   Lista de especies de Chile (fuente única)
 docs/                Brief, formato de datos y decisiones del proyecto
+pipeline/            Paquete Python `aves` (SQLite, importadores) y carpetas.csv
 tools/               Scripts auxiliares (íconos)
 .github/workflows/   Publicación automática en GitHub Pages
 ```
@@ -51,5 +66,6 @@ Las **fotos, audios y CSV de observaciones no van en este repositorio**. Viven e
 - [x] Fase 0: repositorio y publicación
 - [x] Fase 1: libreta de campo web (PWA sin conexión)
 - [x] Fase 2: respaldo por CSV, sin servidor
-- [ ] Fase 3: base de datos SQLite e importador en Python
-- [ ] Fase 4+: BirdNET (audio), identificación por imagen, revisión y detector en vivo
+- [x] Fase 3: base de datos SQLite e importador en Python
+- [ ] Fase 4: clasificar las fotos sin ordenar por similitud con las ya ordenadas (ver docs/decisions.md)
+- [ ] Fase 5+: BirdNET (audio), interfaz de revisión y detector en vivo
