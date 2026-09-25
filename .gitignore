@@ -11,7 +11,7 @@
 *.csv
 *.db
 *.sqlite
-Aves/
+/Aves/
 
 # Python
 __pycache__/
